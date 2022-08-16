@@ -1,16 +1,23 @@
+from urllib.request import AbstractBasicAuthHandler
 import keyboard
 import threading
 import pyautogui
 import socket #For Network Programming
 import time
 import queue #for queue messagea
+import key_map
 
 SERVER_IP = '192.168.0.83'
 SERVER_PORT = 80 #DEFAULT HTTP PORT
-STR_BUFFER = 'MOVE_COMMAND_LEFT'
+STR_BUFFER = '  _COMMAND'
 thread_off_flag = False
 thread_on_flag = False
 data_q = queue.Queue()
+
+class Data_Frame:
+    def __init__(self):
+        self.data_key
+    
 
 class Hotkey(threading.Thread):
     def __init__(self):
@@ -75,7 +82,8 @@ class My_Socket(threading.Thread):
         self.nuvoton_socket.settimeout(duration)
     
     def send_message(self, value):
-        self.nuvoton_socket.send(value.encode())
+        #self.nuvoton_socket.send(value.encode())
+        self.nuvoton_socket.send(value)
         
     def recv_message(self):
         return self.nuvoton_socket.recv(1024)
@@ -86,8 +94,13 @@ class My_Socket(threading.Thread):
         self.socket_connect()
         self.socket_set_timeout(0.5)     
         while True:
-            if data_q.qsize()>1:
-                self.send_message(data_q.get())
+            if data_q.qsize()>=1:
+                self.send_data = data_q.get()
+                print(f'Data_val 1 : {self.send_data}')
+                self.send_data = Get_Key(self.send_data)
+                print(f'Data_val : {self.send_data}')
+                self.send_str = f'{self.send_data}{STR_BUFFER.encode()}'
+                self.send_message(self.send_str)
                 time.sleep(1)
                 self.data = self.recv_message()
                 print("resp from server : {}".format(self.data))
@@ -95,11 +108,16 @@ class My_Socket(threading.Thread):
             if thread_off_flag == True :
                 break
             
+def Get_Key(t_key): 
+    for key, value in key_map.key_map.items():
+        if t_key == key:
+            return value
+    
+            
 def Do_it():
 
-    hotkey_thread = Hotkey()  
+    hotkey_thread = Hotkey() 
     hotkey_thread.start()  
-    
     while True:
         if(hotkey_thread.event_f4) == True:   
             tcp_thread = My_Socket(SERVER_IP,SERVER_PORT)
@@ -113,5 +131,6 @@ def Do_it():
     hotkey_thread.join()
     hooking_thread.join()
     keyboard.unhook_all()
+    print("FINISH")
     
-Do_it()   
+Do_it()  
